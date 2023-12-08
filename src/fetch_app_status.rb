@@ -9,7 +9,7 @@ require "json"
 
 # Constants
 def bundle_ids
-  ENV["BUNDLE_IDENTIFIERS"]
+  ENV["BUNDLE_IDENTIFIERS"] || "*"
 end
 
 def itc_username
@@ -32,43 +32,55 @@ def spaceship_connect_api_key
   ENV["SPACESHIP_CONNECT_API_KEY"]
 end
 
-def uses_app_store_connect_auth_token
-  !spaceship_connect_api_key_id.nil? && !spaceship_connect_api_issuer_id.nil? && !spaceship_connect_api_key.nil?
+def authentication_method
+  if !spaceship_connect_api_key_id.nil? && !spaceship_connect_api_issuer_id.nil? && !spaceship_connect_api_key.nil?
+    return :token
+  elsif !itc_username.nil? && !itc_password.nil?
+    return :credentials
+  end
 end
 
-def uses_app_store_connect_auth_credentials
-  !uses_app_store_connect_auth_token && !itc_username.nil?
+def authenticate
+  auth_method = authentication_method
+  case auth_method
+  when :token
+    Spaceship::ConnectAPI.token = Spaceship::ConnectAPI::Token.create(
+      key_id: spaceship_connect_api_key_id,
+      issuer_id: spaceship_connect_api_issuer_id,
+      filepath: spaceship_connect_api_key
+    )
+  when :credentials
+    Spaceship::ConnectAPI.login(itc_username, itc_password)
+  else
+    raise "No valid authentication method found."
+  end
+rescue => e
+  puts "Authentication failed: #{e.message}"
+  exit 1
 end
 
 def itc_team_id_array
   # Split team_id
-  ENV["ITC_TEAM_IDS"].to_s.split(",")
+  env_teams = ENV["ITC_TEAM_IDS"]
+  env_teams&.split(",") || []
 end
 
 def number_of_builds
   (ENV["NUMBER_OF_BUILDS"] || 1).to_i
 end
 
-unless uses_app_store_connect_auth_token || uses_app_store_connect_auth_credentials
-  puts "Couldn't find valid authentication token or credentials."
-  exit
-end
-
 def get_version_info(app)
   latest_version_info = app.get_latest_app_store_version(platform: Spaceship::ConnectAPI::Platform::IOS)
-  # FIXME: Analyze how to read the store icon. See https://github.com/fastlane/fastlane/issues/17370 for more info.
-  if uses_app_store_connect_auth_credentials
-    icon_url = latest_version_info.store_icon["templateUrl"]
-    icon_url["{w}"] = "340"
-    icon_url["{h}"] = "340"
-    icon_url["{f}"] = "png"
+  icon_url = ""
+  if latest_version_info.store_icon.present?
+    icon_url = latest_version_info.store_icon.asset_token
   end
   {
     "name" => app.name,
     "version" => latest_version_info.version_string,
     "status" => latest_version_info.app_store_state,
     "appId" => app.id,
-    "iconUrl" => icon_url,
+    "iconUrl" => icon_url
   }
 end
 
@@ -86,9 +98,10 @@ end
 
 def get_app_version_from(bundle_ids)
   apps = []
-  if bundle_ids
+  if bundle_ids != "*"
     bundle_ids.split(",").each do |id|
-      apps.push(Spaceship::ConnectAPI::App.find(id))
+      app = Spaceship::ConnectAPI::App.find(id)
+      apps.push(app) if app
     end
   else
     apps = Spaceship::ConnectAPI::App.all
@@ -100,17 +113,12 @@ def get_app_version_from(bundle_ids)
   end
 end
 
-if uses_app_store_connect_auth_token
-  Spaceship::ConnectAPI.auth(key_id: spaceship_connect_api_key_id, issuer_id: spaceship_connect_api_issuer_id, key: spaceship_connect_api_key)
-else
-  Spaceship::ConnectAPI.login(itc_username, itc_password)
-end
+authenticate
 
 # All json data
 versions = []
 
 # Add for the team_ids
-# Test if itc_team doesnt exists
 if itc_team_id_array.length.zero?
   versions += get_app_version_from(bundle_ids)
 else
@@ -120,4 +128,4 @@ else
   end
 end
 
-puts JSON.dump versions
+puts JSON.pretty_generate(versions)

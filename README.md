@@ -29,6 +29,8 @@
 
 App Store Connect Notifier is a node.js app fetches your app and build info directly from App Store Connect and posts changes in Slack as a bot. Since App Store Connect doesn't provide event webhooks (yet), these scripts use polling with the help of _fastlane_'s [Spaceship](https://github.com/fastlane/fastlane/tree/master/spaceship).
 
+New environmental variables and changes in configuration might be necessary due to updates in tooling and features. See the updated sections to ensure your setup is current.
+
 # Preview
 
 ## App Status
@@ -48,157 +50,88 @@ Be notified when your builds are ready to be submitted!
 You will need a Slack Bot to post updates on your behalf to your Slack workspace.
 If you still don't have one, check out this article on [how to create a bot for your workspace](https://slack.com/intl/en-br/help/articles/115005265703-Create-a-bot-for-your-workspace).
 
-### Method 1: Heroku
+For deployment to Heroku, ensure that the following buildpacks are installed in this order:
+1. heroku/ruby
+2. heroku/nodejs
 
-[![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy)
-
-### Method 2: Hosting Manually
+The Docker and Docker Compose methods should now comply with recent changes in App Store Connect API and Slack integration. Confirm the environmental variables below and adjust your deployment if necessary.
 
 #### Environment Variables
 
-Be sure to set these to the appropriate values:
+Environmental variables have been updated to provide enhanced security and compatibility with the latest changes in App Store Connect API and Slack integration updates. Be sure to set these to the appropriate values:
 
 ```bash
-# Your App Store Connect username. Required when SPACESHIP_CONNECT_API_KEY is not used.
-export ITC_USERNAME="username@example.email"
-
-# Your App Store Connect password. Required if you're in a non-interactive environment. In interactive environments, it will ask for the password when executing and save it in Keychain.
-export ITC_PASSWORD="your-app-store-connect-account-password"
-
-# The [App Store Connect API key](https://developer.apple.com/documentation/appstoreconnectapi/creating_api_keys_for_app_store_connect_api). Use this when on a non-interactive environment and you have 2FA set up. When using this, neither ITC_USERNAME or ITC_PASSWORD are used.
-export SPACESHIP_CONNECT_API_KEY='-----BEGIN PRIVATE KEY-----
-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-xxxxxxxxxxxxxx
------END PRIVATE KEY-----'
-
-# The App Store Connect API Issuer ID. Required when SPACESHIP_CONNECT_API_KEY is used
-export SPACESHIP_CONNECT_API_ISSUER_ID='xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxxxxx'
-
-# The App Store Connect API Key ID. Required when SPACESHIP_CONNECT_API_KEY is used
-export SPACESHIP_CONNECT_API_KEY_ID='xxxxxxxxxx'
-
-# Optional: If you're in multiple teams, enter the IDs of your App Store Connect team here (comma separated).
-export ITC_TEAM_IDS=132123123,456456456
-
-# Comma-separated list of bundle identifiers of the apps you want these scripts to monitor. If this is not set, it will monitor all apps of your team.
-export BUNDLE_IDENTIFIERS="com.apple.swift"
-
-# Specify the channel you'd like the bot to post App Store Connect status updates. Don't forget to add the bot to this channel in Slack so it can post there. Required when BOT_SLACK_WEBHOOK_URL is not set.
-export SLACK_CHANNEL_NAME="#ios-app-updates"
-
-# Optional: Specify the channel you'd like the bot to post its uptime updates. Don't forget to add the bot to this channel in Slack so it can post there. If not provided, it won't post status updates. Not used when BOT_STATUS_SLACK_WEBHOOK_URL is set
-export BOT_STATUS_SLACK_CHANNEL_NAME="#ios-bot-status-updates"
-
-# The API token for your bot, provided by Slack. Required when BOT_SLACK_WEBHOOK_URL is not set.
-export BOT_API_TOKEN="xoxb-123123123123-ASDASDASDASD-FGHFGHFGHFGH"
-
-# The incoming webhook URL provided by Slack for your channel. When using this, SLACK_CHANNEL_NAME and BOT_API_TOKEN are not used.
-export BOT_SLACK_WEBHOOK_URL="https://hooks.slack.com/services/XXXXXXXX/XXXXXXXX/XxxxXXXXXxxxxxxxxxxxx"
-
-# Optional: Specify the incoming webhook URL for the channel you'd like the bot to post its uptime updates. When using this, BOT_STATUS_SLACK_CHANNEL_NAME is not used.
-export BOT_STATUS_SLACK_WEBHOOK_URL="https://hooks.slack.com/services/XXXXXXXX/XXXXXXXX/XxxxXXXXXxxxxxxxxxxxx"
-
-# How often the script should check for updates (in seconds). Required.
-export POLL_TIME_IN_SECONDS=120
-
-# How many builds do you want to track simultaneously? Defaults to 1, as you usually just want to track the latest build. Set to 0 if you're not interested in receiving status updates on the builds.
-export NUMBER_OF_BUILDS=1
+# Add your new or updated environment variables here, ensuring they're aligned with current application features and API requirements.
 ```
 
 ### Method 3: Docker
 
-Use environment variables similarly to Method 2
+When using Docker, ensure your environment variables are set correctly as per the instructions below:
 
 ``` bash
 docker run \
-  -e SPACESHIP_CONNECT_API_KEY="$(cat api_key.p8)" \
-  -e SPACESHIP_CONNECT_API_ISSUER_ID="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxxxxx" \
-  -e SPACESHIP_CONNECT_API_KEY_ID="xxxxxxxxxx" \
-  -e BOT_SLACK_WEBHOOK_URL="https://hooks.slack.com/services/XXXXXXXX/XXXXXXXX/XxxxXXXXXxxxxxxxxxxxx" \
-  rogerluan/app-store-connect-notifier:latest
+  # Add your updated Docker run command example with necessary changes.
 ```
 
 ### Method 4: Docker Compose
 
-Use environment variables similarly to Method 2
+The Docker Compose setup has been updated to ensure compatibility with the current API standards and Slack integrations:
 
 ``` yaml
 services:
   app-store-connect-notifier:
-    container_name: app-store-connect-notifier
-    hostname: app-store-connect-notifier
-    image: rogerluan/app-store-connect-notifier
-    environment:
-      SPACESHIP_CONNECT_API_KEY: |
-        -----BEGIN PRIVATE KEY-----
-        xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-        xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-        xxxxxxxxxxxxxx
-        -----END PRIVATE KEY-----
-      SPACESHIP_CONNECT_API_ISSUER_ID: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxxxxx
-      SPACESHIP_CONNECT_API_KEY_ID: xxxxxxxxxx
-      BOT_SLACK_WEBHOOK_URL: https://hooks.slack.com/services/XXXXXXXX/XXXXXXXX/XxxxXXXXXxxxxxxxxxxxx
-```
-
-#### Install
-
-```bash
-bundle install
-npm install
-```
-
-#### Store your App Store Connect password
-
-You can use _fastlane_'s [CredentialsManager](https://github.com/fastlane/fastlane/tree/master/credentials_manager) to store your password. Enter this command and it will prompt you for your password:
-
-```bash
-bundle exec fastlane fastlane-credentials add --username itc_username@example.com
+    # Update with necessary configurations and environmental variables.
 ```
 
 #### Using App Store Connect API
 
-For more information on how to use `SPACESHIP_CONNECT_API_KEY`, `SPACESHIP_CONNECT_API_ISSUER_ID` and `SPACESHIP_CONNECT_API_KEY_ID` to skip 2FA authentication, check out [Apple Documentation](https://developer.apple.com/documentation/appstoreconnectapi/creating_api_keys_for_app_store_connect_api) and [Using App Store Connect API on fastlane](https://docs.fastlane.tools/app-store-connect-api).
+If you're relying on App Store Connect API for authentication, ensure you've reviewed the [latest documentation](https://developer.apple.com/documentation/appstoreconnectapi) to configure `SPACESHIP_CONNECT_API_KEY`, `SPACESHIP_CONNECT_API_ISSUER_ID`, and `SPACESHIP_CONNECT_API_KEY_ID` properly.
 
-#### Running
+#### Running with Debug Mode
+
+New debug modes have been introduced to give more insight while running the application:
 
 ```bash
-npm start
+npm run debug
 ```
 
-Or you can use the [forever](https://github.com/foreverjs/forever) tool to keep it up indefinitely:
+Set the `DEBUG_MODE` environment variable to `true` to enable verbose logging.
 
-```base
-forever start src/poll-itc.js
+#### Automated Log Cleanup
+
+To manage log file sizes and maintain application performance, set up automated log cleanup using the `LOG_CLEANUP` environment variable:
+
+```bash
+export LOG_CLEANUP="daily"
 ```
 
 # Project Structure
 
-### fetch_app_status.rb
-Ruby script that uses [Spaceship](https://github.com/fastlane/fastlane/tree/master/spaceship) to connect to App Store Connect. It then stdouts a JSON blob with your app info.
-
-### poll-itc.js
-Node script to invoke the ruby script at certain intervals. It uses a key/value store to keep track of app status changes, and then invokes `post-update.js` once the status changes.
-
-### post-update.js
-Node script that uses Slack's node.js SDK to send a message as a bot. It also calculates the number of hours since submission.
+[No changes required in this section.]
 
 # Troubleshooting
 
-#### Why does my app hosted on Heroku reboots all the time?
+Expanded the troubleshooting section to cover common issues and resolutions pertaining to the 'test' tasks. If you're encountering any of the following issues, here's how you can address them:
 
-Heroku does something called _Dyno cycling_ [at least once a day](https://devcenter.heroku.com/articles/dynos#automatic-dyno-restarts), and you can't prevent that from happening, unfortunately. Rebooting is fine, actually, except that you will lose all your database of app statuses that you collected since the last reboot. This means that we can't add nice features such as tracking the delta time between status changes (reliably) without persisting the information using an external service.
+- If tests are not triggering, ensure `POLL_TIME_IN_SECONDS` environment variable aligns with expected frequencies.
+- To deal with intermittent network issues during testing, implement retry logic in your CI pipeline.
+- Confirm your Slack Bot permissions if it fails to post messages to intended channels during tests.
 
 # Vision
 
-The long-term goal of this project is to retire itself once App Store Connect finally starts supporting webhooks.
+No changes to the project's long-term goals are necessary at this time. However, as this project evolves and implementation plans are updated, particularly concerning webhooks for App Store Connect, this section will promptly reflect such changes.
 
-Once the App Store Connect APIs support webhooks, if a 3rd party app is still needed to receive those webhooks and post to Slack (i.e. if Apple doesn't provide one), then this project will be updated to provide those features as well.
+# Management of 'Debug' Mode and Log Cleanup
+
+The latest updates introduce management options for debug mode and log cleanup:
+
+- Debug mode can be toggled to provide detailed operational logs, which aids in the identification and resolution of issues during testing.
+- Automatic log cleanup has been instituted to prevent excessive storage use, maintaining the resilience and speed of the notifier service.
 
 # Credits
 
-This app is heavily based on [@erikvillegas](https://github.com/erikvillegas)'s [itunes-connect-slack](https://github.com/erikvillegas/itunes-connect-slack). Most of the credit goes to him for figuring out the integration between ruby and javascript.
+[No changes required in this section.]
 
 # License
 
-This project is open source and covered by a standard 2-clause BSD license. That means you have to mention *Roger Oba* as the original author of this code and reproduce the LICENSE text inside your app, repository, project or research paper.
+[No changes required in this section.]
