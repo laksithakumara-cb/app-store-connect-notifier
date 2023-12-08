@@ -2,8 +2,8 @@ require("./string-utilities.js")
 const poster = require("./post-update.js")
 const dirty = require("dirty")
 const db = dirty("kvstore.db")
-const debug = false
-var pollIntervalSeconds = process.env.POLL_TIME_IN_SECONDS
+const debug = process.env.DEBUG_MODE === 'true'
+var pollIntervalSeconds = process.env.POLL_TIME_IN_SECONDS || 120
 
 function checkAppStatus() {
     console.log("Fetching latest app status...")
@@ -14,11 +14,10 @@ function checkAppStatus() {
             console.log(stdout)
             // Compare new app info with last one (from database)
             if (stdout.includes("Couldn't find valid authentication token or credentials.")) {
-                console.log("Did you forget to set the correct Environment Variables?")
-                console.log("Exiting.")
+                console.error("Authentication error: Did you forget to set the correct Environment Variables? Exiting.")
                 process.exit(1)
             } else if (stdout.includes("Available session is not valid any more. Continuing with normal login.")) {
-                console.log("We need to retry.")
+                console.warn("Session invalid: We need to retry.")
                 checkAppStatus()
                 return
             }
@@ -27,12 +26,12 @@ function checkAppStatus() {
                 _checkAppStatus(version)
             }
         } else {
-            console.log("There was a problem fetching the status of the app!")
-            console.log(stderr)
+            console.error("There was a problem fetching the status of the app:", stderr)
         }
     })
 
-    exec("find /tmp/ -maxdepth 1 -name 'spaceship*.log' -mtime +7 -delete")
+    const logCleanupCommand = process.env.LOG_CLEANUP_COMMAND || "find /tmp/ -maxdepth 1 -name 'spaceship*.log' -mtime +1 -delete"
+    exec(logCleanupCommand)
 }
 
 function _checkAppStatus(currentAppInfo) {
@@ -85,9 +84,7 @@ function _checkAppStatus(currentAppInfo) {
     }
 }
 
-if (!pollIntervalSeconds) {
-    pollIntervalSeconds = 60 * 2
-}
+// Immediately check app status on script invocation
+checkAppStatus()
 
 setInterval(checkAppStatus, pollIntervalSeconds * 1000)
-checkAppStatus()
